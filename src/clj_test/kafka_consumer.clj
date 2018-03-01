@@ -8,19 +8,30 @@
 
 (def topic "TEST.TOPIC")
 
-(defn ^KafkaProducer producer [prop]
-  (memoize #(KafkaProducer. prop)))
+(defn ^KafkaProducer create-producer [prop]
+  (KafkaProducer. prop))
 
-(defn ^String message-key []
+(defn- get-properties []
+  prop)
+
+(defn- ^String message-key []
   (str/replace (UUID/randomUUID) "-" ""))
 
-(defn send-message [message topic properties]
-  (let [p (producer properties)
-        r (ProducerRecord.
-            topic,
-            (message-key),
-            message)]
-    (.send p r)))
+(def producer (atom (create-producer (get-properties))))
+
+(defn close-producer! []
+  (.close @producer))
+
+(defn- ^ProducerRecord create-record [topic message]
+  (ProducerRecord. topic, (message-key), message))
+
+(defn send-message [message topic]
+  (let [r (create-record topic message)]
+    (try
+      (.send @producer r)
+      (catch Exception e
+        (println e))
+      (finally (println "fin")))))
 
 (def echo-chan (chan))
 
